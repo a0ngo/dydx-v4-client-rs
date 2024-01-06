@@ -1,3 +1,5 @@
+use std::{error::Error, fmt};
+
 #[derive(Debug)]
 pub(crate) struct ConstructorError {
     message: String,
