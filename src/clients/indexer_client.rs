@@ -1,33 +1,33 @@
 use serde::{Deserialize, Serialize};
-use std::{borrow::Borrow, collections::HashMap};
+use std::{borrow::Borrow, collections::HashMap, error::Error, time::Duration};
 
-use super::{errors::RestError, ConstructorError};
+use super::errors::{ConstructorError, RestError};
 use is_url::is_url;
 use reqwest::blocking::{self, Client as BlockingClient};
 
 pub struct IndexerClient {
     indexer_config: IndexerConfig,
     api_timeout: u32,
-    markets: MarketsClient,
+    // markets: MarketsClient,
     accounts: AccountsClient,
-    utiltiy: UtilityClient,
+    // utiltiy: UtilityClient,
     req_handler: RestHandler,
 }
 
 impl IndexerClient {
-    pub fn new(indexer_config: IndexerConfig, api_timeout: Option<u32>) -> Self {
-        let req_handler = RestHandler::new(
-            indexer_config.rest_endpoint.clone(),
-            indexer_config.websocket_endpoint.clone(),
-        )?;
-        IndexerClient {
+    pub fn new(
+        indexer_config: IndexerConfig,
+        api_timeout: Option<u32>,
+    ) -> Result<Self, ConstructorError> {
+        let req_handler = RestHandler::new(indexer_config.rest_endpoint.clone(), None)?;
+        Ok(IndexerClient {
             indexer_config,
             api_timeout: api_timeout.unwrap_or(3000),
-            markets: MarketsClient::new(indexer_config.clone(), req_handler.clone()),
-            accounts: AccountsClient::new(indexer_config.clone(), req_handler.clone()),
-            utiltiy: UtilityClient::new(indexer_config.clone(), req_handler.clone()),
+            // markets: MarketsClient::new(indexer_config.clone(), req_handler.clone()),
+            accounts: AccountsClient::new(req_handler.clone()),
+            // utiltiy: UtilityClient::new(indexer_config.clone(), req_handler.clone()),
             req_handler,
-        }
+        })
     }
 }
 
@@ -46,6 +46,7 @@ impl IndexerConfig {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct RestHandler {
     host: String,
     timeout: u32,
@@ -72,9 +73,13 @@ impl RestHandler {
         Ok(RestHandler {
             host,
             timeout: api_timeout.unwrap_or(3000),
-            req_client: blocking::ClientBuilder::new()
-                .timeout(api_timeout.unwrap_or(3))
-                .build(),
+            req_client: match blocking::ClientBuilder::new()
+                .timeout(Duration::from_secs(api_timeout.unwrap_or(3).into()))
+                .build()
+            {
+                Ok(client) => client,
+                Err(e) => return Err(ConstructorError::new(e.to_string())),
+            },
         })
     }
 
@@ -111,8 +116,11 @@ impl RestHandler {
         }
 
         match self.req_client.get(url).send() {
-            Ok(result) => Ok(result.json::<T>()),
-            Err(e) => Err(RestError::new(e.into())),
+            Ok(result) => Ok(match result.json::<T>() {
+                Ok(json) => json,
+                Err(e) => return Err(RestError::new(e.to_string())),
+            }),
+            Err(e) => Err(RestError::new(e.to_string())),
         }
     }
 
@@ -121,7 +129,10 @@ impl RestHandler {
         T: for<'a> Deserialize<'a>,
         B: for<'a> Serialize,
     {
-        let body = serde_json::to_string(body_args.borrow())?;
+        let body = match serde_json::to_string(body_args.borrow()) {
+            Ok(str) => str,
+            Err(e) => return Err(RestError::new(e.to_string())),
+        };
         let url = format!("{}{}", self.host, path);
 
         if !is_url(url.as_str()) {
@@ -129,8 +140,11 @@ impl RestHandler {
         }
 
         match self.req_client.post(url).body(body).send() {
-            Ok(result) => Ok(result.json::<T>()),
-            Err(e) => Err(RestError::new(e.into())),
+            Ok(result) => Ok(match result.json::<T>() {
+                Ok(json) => json,
+                Err(e) => return Err(RestError::new(e.to_string())),
+            }),
+            Err(e) => Err(RestError::new(e.to_string())),
         }
     }
 }
