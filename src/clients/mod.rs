@@ -2,8 +2,6 @@ mod errors;
 pub mod indexer_client;
 pub mod indexer_client_types;
 
-
-
 // ========================================================
 // Traits and macros for easier conversion for get/post
 // ========================================================

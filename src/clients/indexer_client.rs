@@ -3,6 +3,7 @@ use crate::clients::CamelCaseify;
 use crate::option_t_to_string_option;
 use crate::option_to_tuple;
 use serde::{Deserialize, Serialize};
+
 use std::{borrow::Borrow, collections::HashMap, time::Duration};
 
 use crate::constants::{OrderSide, OrderStatus, OrderType, TickerType};
@@ -22,9 +23,6 @@ use reqwest::blocking::{self, Client as BlockingClient};
 pub struct IndexerClient {
     indexer_config: IndexerConfig,
     api_timeout: u32,
-    // markets: MarketsClient,
-    accounts: AccountsClient,
-    // utiltiy: UtilityClient,
     req_handler: RestHandler,
 }
 
@@ -38,7 +36,7 @@ impl IndexerClient {
             indexer_config,
             api_timeout: api_timeout.unwrap_or(3000),
             // markets: MarketsClient::new(indexer_config.clone(), req_handler.clone()),
-            accounts: AccountsClient::new(req_handler.clone()),
+            // accounts: AccountsClient::new(req_handler.clone()),
             // utiltiy: UtilityClient::new(indexer_config.clone(), req_handler.clone()),
             req_handler,
         })
@@ -170,16 +168,8 @@ impl RestHandler {
     }
 }
 
-pub struct AccountsClient {
-    req_handler: RestHandler,
-}
-
-impl AccountsClient {
-    pub(crate) fn new(req_handler: RestHandler) -> Self {
-        AccountsClient { req_handler }
-    }
-
-    pub fn get_sub_accounts(
+impl AccountsClient for IndexerClient {
+    fn get_sub_accounts(
         &self,
         address: String,
         limit: Option<u32>,
@@ -190,7 +180,7 @@ impl AccountsClient {
         )
     }
 
-    pub fn get_sub_account(
+    fn get_sub_account(
         &self,
         address: String,
         sub_account_number: u32,
@@ -201,7 +191,7 @@ impl AccountsClient {
         )
     }
 
-    pub fn get_sub_account_perpetual_positions(
+    fn get_sub_account_perpetual_positions(
         &self,
         request: PositionDetailsRequest,
     ) -> Result<PerpetualPositionResponse, APIError> {
@@ -209,7 +199,7 @@ impl AccountsClient {
             .get("/v4/perpetualPositions".to_string(), Some(request.into()))
     }
 
-    pub fn get_sub_account_asset_positions(
+    fn get_sub_account_asset_positions(
         &self,
         request: PositionDetailsRequest,
     ) -> Result<AssetPositionResponse, APIError> {
@@ -217,7 +207,7 @@ impl AccountsClient {
             .get("/v4/assetPositions".to_string(), Some(request.into()))
     }
 
-    pub fn get_sub_account_transfers(
+    fn get_sub_account_transfers(
         &self,
         address: String,
         sub_account_number: u32,
@@ -237,7 +227,7 @@ impl AccountsClient {
         )
     }
 
-    pub fn get_sub_account_orders(
+    fn get_sub_account_orders(
         &self,
         address: String,
         sub_account_number: u32,
@@ -269,11 +259,11 @@ impl AccountsClient {
         )
     }
 
-    pub fn get_order(&self, order_id: String) -> Result<OrderResponseStruct, APIError> {
+    fn get_order(&self, order_id: String) -> Result<OrderResponseStruct, APIError> {
         self.req_handler.get(format!("/v4/orders/{order_id}"), None)
     }
 
-    pub fn get_sub_account_fills(
+    fn get_sub_account_fills(
         &self,
         address: String,
         sub_account_number: u32,
@@ -297,7 +287,7 @@ impl AccountsClient {
         )
     }
 
-    pub fn get_sub_account_historical_pnls(
+    fn get_sub_account_historical_pnls(
         &self,
         address: String,
         sub_account_number: u32,
@@ -314,4 +304,77 @@ impl AccountsClient {
             ]),
         )
     }
+}
+
+// ========================================================
+// Client traits
+// ========================================================
+
+trait AccountsClient {
+    fn get_sub_accounts(
+        &self,
+        address: String,
+        limit: Option<u32>,
+    ) -> Result<Vec<SubAccountResponseObject>, APIError>;
+
+    fn get_sub_account(
+        &self,
+        address: String,
+        sub_account_number: u32,
+    ) -> Result<SubAccountResponseObject, APIError>;
+
+    fn get_sub_account_perpetual_positions(
+        &self,
+        request: PositionDetailsRequest,
+    ) -> Result<PerpetualPositionResponse, APIError>;
+
+    fn get_sub_account_asset_positions(
+        &self,
+        request: PositionDetailsRequest,
+    ) -> Result<AssetPositionResponse, APIError>;
+
+    fn get_sub_account_transfers(
+        &self,
+        address: String,
+        sub_account_number: u32,
+        limit: Option<u32>,
+        created_before_or_at_height: Option<u32>,
+        created_before_or_at: Option<String>,
+    ) -> Result<TransferResponse, APIError>;
+
+    fn get_sub_account_orders(
+        &self,
+        address: String,
+        sub_account_number: u32,
+        ticker: Option<String>,
+        ticker_type: TickerType,
+        side: Option<OrderSide>,
+        status: Option<OrderStatus>,
+        order_type: Option<OrderType>,
+        limit: Option<u32>,
+        good_til_block_before_or_at: Option<u64>,
+        good_til_block_time_before_or_at: Option<String>,
+        return_latest_orders: Option<bool>,
+    ) -> Result<Vec<OrderResponseStruct>, APIError>;
+
+    fn get_order(&self, order_id: String) -> Result<OrderResponseStruct, APIError>;
+
+    fn get_sub_account_fills(
+        &self,
+        address: String,
+        sub_account_number: u32,
+        ticker: Option<String>,
+        ticker_type: TickerType,
+        limit: Option<u32>,
+        created_before_or_at_height: Option<u32>,
+        created_before_or_at: Option<String>,
+    ) -> Result<FillResponse, APIError>;
+
+    fn get_sub_account_historical_pnls(
+        &self,
+        address: String,
+        sub_account_number: u32,
+        effective_before_or_at: Option<String>,
+        effective_at_or_after: Option<String>,
+    ) -> Result<HistoricalPnLResponse, APIError>;
 }
