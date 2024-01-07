@@ -2,6 +2,10 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
+use crate::constants::{
+    OrderSide, OrderStatus, OrderTimeInForce, OrderType, PerpetualPositionStatus,
+};
+
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct SubAccountResponseObject {
@@ -9,14 +13,14 @@ pub struct SubAccountResponseObject {
     subaccount_number: u32,
     equity: String,
     free_collateral: String,
-    open_perpetual_positions: Option<HashMap<String, PerpetualPositionResponseObject>>,
-    asset_positions: Option<HashMap<String, AssetPositionResponseObject>>,
+    open_perpetual_positions: Option<HashMap<String, PerpetualPositionResponseStruct>>,
+    asset_positions: Option<HashMap<String, AssetPositionResponseStruct>>,
     margin_enabled: bool,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct PerpetualPositionResponseObject {
+pub struct PerpetualPositionResponseStruct {
     market: String,
     status: Option<PerpetualPositionStatus>,
     side: Option<PositionSide>,
@@ -33,16 +37,10 @@ pub struct PerpetualPositionResponseObject {
     closed_at: Option<String>,
     exit_price: Option<String>,
 }
-#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
-pub enum PerpetualPositionStatus {
-    OPEN,
-    CLOSED,
-    LIQUIDATED,
-}
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
-pub struct AssetPositionResponseObject {
+pub struct AssetPositionResponseStruct {
     symbol: String,
     side: Option<PositionSide>,
     size: String,
@@ -54,6 +52,210 @@ pub enum PositionSide {
     LONG,
     SHORT,
 }
+
+// ========================================
+// Transfer structs and enums
+// ========================================
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum TransferType {
+    TransferIn,
+    TransferOut,
+    Deposit,
+    Withdrawal,
+}
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct TransferResponseSenderObject {
+    sub_account_number: u32,
+    address: String,
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+pub struct TransferResponseStruct {
+    id: String,
+    sender: TransferResponseSenderObject,
+    recipient: TransferResponseSenderObject,
+    size: String,
+    created_at: String,
+    created_at_height: String,
+    symbol: String,
+    #[serde(rename = "type")]
+    transfer_type: TransferType,
+    transaction_hash: String,
+}
+
+// ========================================
+// Order structs
+// ========================================
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct OrderResponseStruct {
+    id: String,
+    subaccount_id: Option<String>,
+    client_id: Option<String>,
+    clob_pair_id: Option<String>,
+    side: OrderSide,
+    size: String,
+    total_filled: String,
+    price: String,
+    #[serde(rename = "type")]
+    order_type: OrderType,
+    reduce_only: bool,
+    order_flags: Option<String>,
+    good_til_block: Option<String>,
+    good_til_block_time: Option<String>,
+    created_at_height: Option<String>,
+    client_metadata: Option<String>,
+    trigger_price: Option<String>,
+    time_in_force: OrderTimeInForce,
+    status: OrderStatus,
+    post_only: bool,
+    ticker: String,
+}
+
+// ========================================
+// Fill structs
+// ========================================
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct FillResponseStruct {
+    id: String,
+    side: OrderSide,
+    liquidity: Liquidity,
+    #[serde(rename = "type")]
+    fill_type: FillType,
+    market: String,
+    market_type: MarketType,
+    price: String,
+    size: String,
+    fee: String,
+    created_at: String,
+    created_at_height: String,
+    order_id: Option<String>,
+    client_metadata: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Liquidity {
+    Maker,
+    Taker,
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum FillType {
+    Maker,
+    Limit,
+    Liquidated,
+    Liquidation,
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum MarketType {
+    Perpetual,
+    Spot,
+}
+
+// ========================================
+// Historical PnL structs
+// ========================================
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct PnLTicksResponseStruct {
+    id: String,
+    subaccount_id: Option<String>,
+    equity: String,
+    total_pnl: String,
+    net_transfers: String,
+    created_at: String,
+    block_height: String,
+    block_time: String,
+}
+
+// ========================================
+// Structs for vec of responses
+// ========================================
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct PerpetualPositionResponse {
+    positions: Vec<PerpetualPositionResponseStruct>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct AssetPositionResponse {
+    positions: Vec<AssetPositionResponseStruct>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct TransferResponse {
+    transfers: Vec<TransferResponseStruct>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct FillResponse {
+    fills: Vec<FillResponseStruct>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoricalPnLResponse {
+    historical_pnl: Vec<FillResponseStruct>,
+}
+
+// ========================================
+// Request structs
+// ========================================
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PositionDetailsRequest {
+    address: String,
+    sub_account_number: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<PerpetualPositionStatus>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    limit: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    create_before_or_at_height: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    create_before_or_at: Option<String>,
+}
+
+impl Into<Vec<(String, Option<String>)>> for PositionDetailsRequest {
+    fn into(self) -> Vec<(String, Option<String>)> {
+        let mut v = vec![
+            ("address".to_string(), Some(self.address)),
+            (
+                "subAccountNumber".to_string(),
+                Some(format!("{}", self.sub_account_number)),
+            ),
+        ];
+        if let Some(status) = self.status {
+            v.push(("status".to_string(), Some(status.into())));
+        };
+        if let Some(limit) = self.limit {
+            v.push(("limit".to_string(), Some(format!("{limit}"))));
+        }
+        if let Some(cboah) = self.create_before_or_at_height {
+            v.push((
+                "createdBeforeOrAtHeight".to_string(),
+                Some(format!("{cboah}")),
+            ));
+        }
+        if let Some(cboa) = self.create_before_or_at {
+            v.push(("createdBeforeOrAt".to_string(), Some(cboa)));
+        }
+        v.to_owned()
+    }
+}
+
+// ========================================
+// Tests
+// ========================================
 
 #[cfg(test)]
 mod tests {
@@ -128,7 +330,7 @@ mod tests {
         let string = "string".to_string();
         let string_option = Some("string".to_string());
 
-        let check_open_perpetual_position = |p: PerpetualPositionResponseObject| {
+        let check_open_perpetual_position = |p: PerpetualPositionResponseStruct| {
             assert_eq!(p.market, string);
             assert_eq!(p.status, Some(PerpetualPositionStatus::OPEN));
             assert_eq!(p.side, Some(PositionSide::LONG));
@@ -146,7 +348,7 @@ mod tests {
             assert_eq!(p.exit_price, string_option);
         };
 
-        let check_asset_position = |a: AssetPositionResponseObject| {
+        let check_asset_position = |a: AssetPositionResponseStruct| {
             assert_eq!(a.symbol, string);
             assert_eq!(a.side, Some(PositionSide::LONG));
             assert_eq!(a.size, string);
