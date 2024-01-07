@@ -20,20 +20,20 @@ impl fmt::Display for ConstructorError {
 impl Error for ConstructorError {}
 
 #[derive(Debug)]
-pub(crate) struct RestError {
+pub struct APIError {
     message: String,
 }
 
-impl RestError {
-    pub fn new(message: String) -> Self {
-        RestError { message }
+impl APIError {
+    pub(crate) fn new(message: String) -> Self {
+        APIError { message }
     }
 }
 
-impl fmt::Display for RestError {
+impl fmt::Display for APIError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }
 }
 
-impl Error for RestError {}
+impl Error for APIError {}
