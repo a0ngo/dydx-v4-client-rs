@@ -1,5 +1,6 @@
 use crate::arg_to_tuple;
 use crate::clients::CamelCaseify;
+use crate::constants::TimePeriod;
 use crate::option_t_to_string_option;
 use crate::option_to_tuple;
 use serde::{Deserialize, Serialize};
@@ -8,8 +9,14 @@ use std::{borrow::Borrow, collections::HashMap, time::Duration};
 
 use crate::constants::{OrderSide, OrderStatus, OrderType, TickerType};
 
+use super::indexer_client_types::CandleResponse;
 use super::indexer_client_types::FillResponse;
+use super::indexer_client_types::HistoricalFundingResponse;
 use super::indexer_client_types::HistoricalPnLResponse;
+use super::indexer_client_types::OrderbookResponse;
+use super::indexer_client_types::PerpetualMarketsResponse;
+use super::indexer_client_types::SparklineResponse;
+use super::indexer_client_types::TradeResponse;
 use super::{
     errors::{APIError, ConstructorError},
     indexer_client_types::{
@@ -35,8 +42,6 @@ impl IndexerClient {
         Ok(IndexerClient {
             indexer_config,
             api_timeout: api_timeout.unwrap_or(3000),
-            // markets: MarketsClient::new(indexer_config.clone(), req_handler.clone()),
-            // accounts: AccountsClient::new(req_handler.clone()),
             // utiltiy: UtilityClient::new(indexer_config.clone(), req_handler.clone()),
             req_handler,
         })
@@ -306,6 +311,87 @@ impl AccountsClient for IndexerClient {
     }
 }
 
+impl MarketsClient for IndexerClient {
+    fn get_perpetual_markets(
+        &self,
+        market: Option<String>,
+    ) -> Result<PerpetualMarketsResponse, APIError> {
+        self.req_handler.get(
+            "/v4/perpetualMarkets".to_string(),
+            Some(vec![option_to_tuple!(market)]),
+        )
+    }
+
+    fn get_perpetual_market_orderbook(
+        &self,
+        market: String,
+    ) -> Result<OrderbookResponse, APIError> {
+        self.req_handler
+            .get(format!("/v4/orderbooks/perpetualMarket/{market}"), None)
+    }
+
+    fn get_perpetual_market_trades(
+        &self,
+        market: String,
+        created_before_or_at_height: Option<u32>,
+        limit: Option<u32>,
+    ) -> Result<TradeResponse, APIError> {
+        self.req_handler.get(
+            format!("/v4/trades/perpetualMarket/{market}"),
+            Some(vec![
+                option_to_tuple!(created_before_or_at_height),
+                option_to_tuple!(limit),
+            ]),
+        )
+    }
+
+    fn get_perpetual_market_candles(
+        &self,
+        market: String,
+        resolution: String,
+        from_iso: Option<String>,
+        to_iso: Option<String>,
+        limit: Option<u32>,
+    ) -> Result<CandleResponse, APIError> {
+        self.req_handler.get(
+            format!("/v4/candles/perpetualMarket/{market}"),
+            Some(vec![
+                arg_to_tuple!(resolution),
+                ("fromISO".to_string(), from_iso),
+                ("toISO".to_string(), to_iso),
+                option_to_tuple!(limit),
+            ]),
+        )
+    }
+
+    fn get_perpetual_market_historical_funding(
+        &self,
+        market: String,
+        effective_before_or_at: Option<String>,
+        effective_before_or_at_height: Option<u32>,
+        limit: Option<u32>,
+    ) -> Result<HistoricalFundingResponse, APIError> {
+        self.req_handler.get(
+            format!("/v4/historicalFunding/{market}"),
+            Some(vec![
+                option_to_tuple!(effective_before_or_at),
+                option_to_tuple!(effective_before_or_at_height),
+                option_to_tuple!(limit),
+            ]),
+        )
+    }
+
+    fn get_perpetual_market_sparklines(
+        &self,
+        time_period: TimePeriod,
+    ) -> Result<SparklineResponse, APIError> {
+        self.req_handler.get(
+            "/v4/sparklines".to_string(),
+            Some(vec![arg_to_tuple!(time_period)]),
+        )
+    }
+}
+
 // ========================================================
 // Client traits
 // ========================================================
@@ -377,4 +463,43 @@ trait AccountsClient {
         effective_before_or_at: Option<String>,
         effective_at_or_after: Option<String>,
     ) -> Result<HistoricalPnLResponse, APIError>;
+}
+
+trait MarketsClient {
+    fn get_perpetual_markets(
+        &self,
+        market: Option<String>,
+    ) -> Result<PerpetualMarketsResponse, APIError>;
+
+    fn get_perpetual_market_orderbook(&self, market: String)
+        -> Result<OrderbookResponse, APIError>;
+
+    fn get_perpetual_market_trades(
+        &self,
+        market: String,
+        starting_before_or_at_height: Option<u32>,
+        limit: Option<u32>,
+    ) -> Result<TradeResponse, APIError>;
+
+    fn get_perpetual_market_candles(
+        &self,
+        market: String,
+        resolution: String,
+        from_iso: Option<String>,
+        to_iso: Option<String>,
+        limit: Option<u32>,
+    ) -> Result<CandleResponse, APIError>;
+
+    fn get_perpetual_market_historical_funding(
+        &self,
+        market: String,
+        effective_before_or_at: Option<String>,
+        effective_before_or_at_height: Option<u32>,
+        limit: Option<u32>,
+    ) -> Result<HistoricalFundingResponse, APIError>;
+
+    fn get_perpetual_market_sparklines(
+        &self,
+        time_period: TimePeriod,
+    ) -> Result<SparklineResponse, APIError>;
 }

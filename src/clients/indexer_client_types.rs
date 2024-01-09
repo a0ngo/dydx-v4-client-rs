@@ -177,6 +177,109 @@ pub struct PnLTicksResponseStruct {
 }
 
 // ========================================
+// Perpetual Market Structs
+// ========================================
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PerpetualMarketResponseStruct {
+    clob_pair_id: String,
+    ticker: String,
+    status: PerpetualMarketStatus,
+    last_price: String,
+    oracle_price: String,
+    price_change_24h: String,
+    volume_24h: String,
+    trades_24h: f64,
+    next_funding_rate: String,
+    initial_margin_fraction: String,
+    maintenance_margin_fraction: String,
+    base_position_notional: String,
+    open_interest: String,
+    atomic_resolution: f64,
+    quantum_conversion_exponent: f64,
+    tick_size: String,
+    step_size: String,
+    step_base_quantums: f64,
+    subticks_per_tick: f64,
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+
+pub enum PerpetualMarketStatus {
+    Active,
+    Paused,
+    CancelOnly,
+    PostOnly,
+    Initializing,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct OrderbookResponsePriceLevel {
+    price: String,
+    size: String,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct TradeResponseStruct {
+    id: String,
+    side: OrderSide,
+    size: String,
+    price: String,
+    create_at: String,
+    create_at_height: String,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CandleResponseStruct {
+    started_at: String,
+    ticker: String,
+    resolution: CandleResolution,
+    low: String,
+    high: String,
+    open: String,
+    close: String,
+    base_token_volume: String,
+    usd_volume: String,
+    trades: u32,
+    starting_open_interest: String,
+    id: String,
+}
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+
+pub enum CandleResolution {
+    #[serde(rename = "1MIN")]
+    OneMin,
+    #[serde(rename = "5MINS")]
+    FiveMin,
+    #[serde(rename = "15MINS")]
+    FifteenMin,
+    #[serde(rename = "30MINS")]
+    ThirtyMin,
+    #[serde(rename = "1HOUR")]
+    OneHour,
+    #[serde(rename = "4HOURS")]
+    FourHour,
+    #[serde(rename = "1DAY")]
+    OneDay,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoricalFundingResponseStruct {
+    ticker: String,
+    rate: String,
+    price: String,
+    effective_at: String,
+    effective_at_height: String,
+}
+
+// ========================================
 // Structs for vec of responses
 // ========================================
 
@@ -205,6 +308,35 @@ pub struct FillResponse {
 pub struct HistoricalPnLResponse {
     historical_pnl: Vec<FillResponseStruct>,
 }
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct PerpetualMarketsResponse {
+    markets: HashMap<String, PerpetualMarketResponseStruct>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct OrderbookResponse {
+    bids: Vec<OrderbookResponsePriceLevel>,
+    asks: Vec<OrderbookResponsePriceLevel>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct TradeResponse {
+    trades: Vec<TradeResponseStruct>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+pub struct CandleResponse {
+    candles: Vec<CandleResponseStruct>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoricalFundingResponse {
+    historical_funding: Vec<HistoricalFundingResponseStruct>,
+}
+
+pub type SparklineResponse = HashMap<String, Vec<String>>;
 
 // ========================================
 // Request structs

@@ -153,3 +153,27 @@ impl Into<String> for OrderTimeInForce {
         }
     }
 }
+
+#[derive(Deserialize, Serialize, Clone, PartialEq, Debug)]
+pub enum TimePeriod {
+    OneDay,
+    SevenDays,
+}
+
+impl Into<String> for TimePeriod {
+    fn into(self) -> String {
+        match self {
+            TimePeriod::OneDay => String::from("ONE_DAY"),
+            TimePeriod::SevenDays => String::from("SEVEN_DAYS"),
+        }
+    }
+}
+
+impl ToString for TimePeriod {
+    fn to_string(&self) -> String {
+        match self {
+            TimePeriod::OneDay => String::from("ONE_DAY"),
+            TimePeriod::SevenDays => String::from("SEVEN_DAYS"),
+        }
+    }
+}
